@@ -11,6 +11,7 @@
 		AC13360E2BDB37AA007E9685 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC13360D2BDB37AA007E9685 /* ContentView.swift */; };
 		AC1336102BDB37AB007E9685 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AC13360F2BDB37AB007E9685 /* Assets.xcassets */; };
 		AC1336132BDB37AB007E9685 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AC1336122BDB37AB007E9685 /* Preview Assets.xcassets */; };
+		AC13361A2BDB3C1D007E9685 /* imagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC1336192BDB3C1D007E9685 /* imagePicker.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -19,6 +20,7 @@
 		AC13360D2BDB37AA007E9685 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		AC13360F2BDB37AB007E9685 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AC1336122BDB37AB007E9685 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		AC1336192BDB3C1D007E9685 /* imagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = imagePicker.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,6 +55,7 @@
 			children = (
 				AC13360B2BDB37AA007E9685 /* Swift__CoreMLApp.swift */,
 				AC13360D2BDB37AA007E9685 /* ContentView.swift */,
+				AC1336192BDB3C1D007E9685 /* imagePicker.swift */,
 				AC13360F2BDB37AB007E9685 /* Assets.xcassets */,
 				AC1336112BDB37AB007E9685 /* Preview Content */,
 			);
@@ -138,6 +141,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AC13360E2BDB37AA007E9685 /* ContentView.swift in Sources */,
+				AC13361A2BDB3C1D007E9685 /* imagePicker.swift in Sources */,
 				AC13360C2BDB37AA007E9685 /* Swift__CoreMLApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
