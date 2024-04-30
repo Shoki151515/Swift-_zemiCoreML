@@ -21,6 +21,7 @@
 		AC13360F2BDB37AB007E9685 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AC1336122BDB37AB007E9685 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		AC1336192BDB3C1D007E9685 /* imagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = imagePicker.swift; sourceTree = "<group>"; };
+		ACFA80A22BE0CC1700256CDF /* Swift--CoreML-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "Swift--CoreML-Info.plist"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,6 +54,7 @@
 		AC13360A2BDB37AA007E9685 /* Swift _CoreML */ = {
 			isa = PBXGroup;
 			children = (
+				ACFA80A22BE0CC1700256CDF /* Swift--CoreML-Info.plist */,
 				AC13360B2BDB37AA007E9685 /* Swift__CoreMLApp.swift */,
 				AC13360D2BDB37AA007E9685 /* ContentView.swift */,
 				AC1336192BDB3C1D007E9685 /* imagePicker.swift */,
@@ -279,6 +281,11 @@
 				DEVELOPMENT_TEAM = 522FSQS5V3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Swift--CoreML-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "写真を撮影するためにカメラを利用します";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -308,6 +315,11 @@
 				DEVELOPMENT_TEAM = 522FSQS5V3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Swift--CoreML-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "写真を撮影するためにカメラを利用します";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

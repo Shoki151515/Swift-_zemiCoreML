@@ -1,12 +1,5 @@
 //
 //  ContentView.swift
-//  Swift _CoreML
-//
-//  Created by syoki iwasyita on 2024/04/26.
-//
-
-//
-//  ContentView.swift
 //  MyCamera
 //
 //  Created by Swift-Beginners.
@@ -99,3 +92,4 @@ struct ContentView: View {
 #Preview {
     ContentView()
 }
+

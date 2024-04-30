@@ -1,8 +1,8 @@
 //
-//  imagePicker.swift
-//  Swift _CoreML
+//  ImagePickerView.swift
+//  MyCamera
 //
-//  Created by syoki iwasyita on 2024/04/26.
+//  Created by Swift-Beginners.
 //
 
 import SwiftUI
