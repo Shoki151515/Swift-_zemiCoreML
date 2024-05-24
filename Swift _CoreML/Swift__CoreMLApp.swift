@@ -1,17 +1,12 @@
-//
-//  Swift__CoreMLApp.swift
-//  Swift _CoreML
-//
-//  Created by syoki iwasyita on 2024/04/26.
-//
+import UIKit
 
-import SwiftUI
+//@main
+//struct MainApp {
+//    static func main() {
+//        let viewController = ObjectDetectionViewController()
+//        let window = UIWindow(frame: UIScreen.main.bounds)
+//        window.rootViewController = viewController
+//        window.makeKeyAndVisible()
+//    }
+//}
 
-@main
-struct Swift__CoreMLApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
-    }
-}

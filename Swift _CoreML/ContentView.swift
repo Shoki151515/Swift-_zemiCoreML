@@ -1,95 +1,152 @@
-//
-//  ContentView.swift
-//  MyCamera
-//
-//  Created by Swift-Beginners.
-//
+import UIKit
+import CoreML
+import Vision
 
-import SwiftUI
+class test_coreml: UIViewController {
 
-struct ContentView: View {
-    // 撮影した写真を保持する状態変数
-    @State var captureImage: UIImage? = nil
-    // 撮影画面(sheet)の開閉状態を管理
-    @State var isShowSheet = false
+    var model: VNCoreMLModel?
+    var imageView: UIImageView!
+    var overlayView: UIView!
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        setupViews()
+        loadModel()
+        performPrediction()
+    }
     
-    var body: some View {
-        VStack {
-            // スペース追加
-            Spacer()
-            // 撮影した写真があるとき
-            if let captureImage {
-                // 撮影写真を表示
-                Image(uiImage: captureImage)
-                // リサイズ
-                    .resizable()
-                // アスペクト比（縦横比）を維持して画面に収める
-                    .scaledToFit()
+    private func setupViews() {
+        // UIImageViewの設定
+        imageView = UIImageView(frame: self.view.bounds)
+        imageView.contentMode = .scaleAspectFit
+        self.view.addSubview(imageView)
+        
+        // オーバーレイビューの設定
+        overlayView = UIView(frame: self.view.bounds)
+        overlayView.backgroundColor = .clear
+        self.view.addSubview(overlayView)
+    }
+    
+    private func loadModel() {
+        // mlpackageのロード
+        guard let modelURL = Bundle.main.url(forResource: "best", withExtension: "mlpackage"),
+              let compiledModelURL = try? MLModel.compileModel(at: modelURL),
+              let mlModel = try? MLModel(contentsOf: compiledModelURL) else {
+            print("Failed to load the model.")
+            return
+        }
+        
+        // Vision フレームワークを使用してモデルをロード
+        do {
+            let visionModel = try VNCoreMLModel(for: mlModel)
+            self.model = visionModel
+        } catch {
+            print("Failed to create VNCoreMLModel: \(error)")
+        }
+    }
+    
+    private func performPrediction() {
+        // テストデータを使用して予測を行う例
+        if let model = self.model {
+            // 例えば、画像データを読み込み、予測を行う
+            guard let image = UIImage(named: "car") else {
+                print("Failed to load the image.")
+                return
             }
             
-            // スペース追加
-            Spacer()
-            // 「カメラを起動する」ボタン
-            Button {
-                // ボタンをタップしたときのアクション
-                // カメラが利用可能かチェック
-                if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                    print("カメラは利用できます")
-                    // カメラが使えるなら、isShowSheetをtrue
-                    isShowSheet.toggle()
-                } else {
-                    print("カメラは利用できません")
-                }
-                
-            } label: {
-                // テキスト表示
-                Text("カメラを起動する")
-                // 横幅いっぱい
-                    .frame(maxWidth: .infinity)
-                // 高さ50ポイントを指定
-                    .frame(height: 50)
-                // 文字列をセンタリング指定
-                    .multilineTextAlignment(.center)
-                // 背景を青色に指定
-                    .background(Color.blue)
-                // 文字色を白色に指定
-                    .foregroundStyle(Color.white)
-            } // 「カメラを起動する」ボタンここまで
-            // 上下左右に余白を追加
-            .padding()
-            // sheetを表示
-            // isPresentedで指定した状態変数がtrueのとき実行
-            .sheet(isPresented: $isShowSheet) {
-                // UIImagePickerController（写真撮影）を表示
-                ImagePickerView(isShowSheet: $isShowSheet, captureImage: $captureImage)
-            } // 「カメラを起動する」ボタンのsheetここまで
+            imageView.image = image
             
-            // captureImageをアンラップする
-            if let captureImage {
-                // captureImageから共有する画像を生成する
-                let shareImage = Image(uiImage: captureImage)
-                // 共有シート
-                ShareLink(item: shareImage, subject: nil, message: nil,
-                          preview: SharePreview("Photo", image: shareImage)) {
-                    // テキスト表示
-                    Text("SNSに投稿する")
-                    // 横幅いっぱい
-                        .frame(maxWidth: .infinity)
-                    // 高さ50ポイント指定
-                        .frame(height: 50)
-                    // 背景を青色に指定
-                        .background(Color.blue)
-                    // 文字色を白色に指定
-                        .foregroundStyle(Color.white)
-                    // 上下左右に余白を追加
-                        .padding()
-                } // ShareLinkここまで
-            } // アンラップここまで
-        } // VStackここまで
-    } // bodyここまで
-} // ContentViewここまで
+            guard let buffer = image.toBuffer() else {
+                print("Failed to convert image to buffer.")
+                return
+            }
+            
+            // 入力画像からバッファを作成
+            let request = VNCoreMLRequest(model: model) { [weak self] (request, error) in
+                if let results = request.results as? [VNRecognizedObjectObservation] {
+                    DispatchQueue.main.async {
+                        self?.overlayView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
+                        for result in results {
+                            self?.drawBoundingBox(boundingBox: result.boundingBox, confidence: result.confidence)
+                        }
+                    }
+                } else if let error = error {
+                    print("Prediction failed: \(error)")
+                }
+            }
+            
+            // リクエストの設定
+            request.imageCropAndScaleOption = .centerCrop
+            
+            let handler = VNImageRequestHandler(cvPixelBuffer: buffer, options: [:])
+            do {
+                try handler.perform([request])
+            } catch {
+                print("Failed to perform request: \(error)")
+            }
+        }
+    }
+    
+    private func drawBoundingBox(boundingBox: CGRect, confidence: VNConfidence) {
+        let width = overlayView.frame.width
+        let height = overlayView.frame.height
+        
+        // バウンディングボックスの位置とサイズを計算
+        let rect = CGRect(
+            x: boundingBox.origin.x * width,
+            y: (1 - boundingBox.origin.y - boundingBox.height) * height,
+            width: boundingBox.width * width,
+            height: boundingBox.height * height
+        )
+        
+        // バウンディングボックスのレイヤーを作成
+        let boxLayer = CALayer()
+        boxLayer.frame = rect
+        boxLayer.borderColor = UIColor.red.cgColor
+        boxLayer.borderWidth = 2.0
+        overlayView.layer.addSublayer(boxLayer)
+        
+        // 信頼度のラベルを追加
+        let textLayer = CATextLayer()
+        textLayer.string = String(format: "Conf: %.2f", confidence)
+        textLayer.fontSize = 14
+        textLayer.foregroundColor = UIColor.red.cgColor
+        textLayer.frame = CGRect(x: rect.origin.x, y: rect.origin.y - 20, width: 100, height: 20)
+        overlayView.layer.addSublayer(textLayer)
+    }
+}
 
-#Preview {
-    ContentView()
+// UIImageをバッファに変換するためのヘルパー関数
+extension UIImage {
+    func toBuffer() -> CVPixelBuffer? {
+        let image = self.cgImage!
+        let options: [CFString: Any] = [
+            kCVPixelBufferCGImageCompatibilityKey: true,
+            kCVPixelBufferCGBitmapContextCompatibilityKey: true
+        ]
+        
+        var pxbuffer: CVPixelBuffer?
+        let width = image.width
+        let height = image.height
+        let attrs = options as CFDictionary
+        
+        CVPixelBufferCreate(kCFAllocatorDefault, width, height, kCVPixelFormatType_32ARGB, attrs, &pxbuffer)
+        
+        guard let buffer = pxbuffer else {
+            return nil
+        }
+        
+        CVPixelBufferLockBaseAddress(buffer, CVPixelBufferLockFlags(rawValue: 0))
+        let pxdata = CVPixelBufferGetBaseAddress(buffer)
+        
+        let rgbColorSpace = CGColorSpaceCreateDeviceRGB()
+        let context = CGContext(data: pxdata, width: width, height: height, bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(buffer), space: rgbColorSpace, bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue)
+        
+        context?.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        CVPixelBufferUnlockBaseAddress(buffer, CVPixelBufferLockFlags(rawValue: 0))
+        
+        return buffer
+    }
 }
 
