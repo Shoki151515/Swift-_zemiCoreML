@@ -1,67 +1,192 @@
-//
-//  ImagePickerView.swift
-//  MyCamera
-//
-//  Created by Swift-Beginners.
-//
+import UIKit
+import CoreML
+import Vision
+import AVFoundation
 
-import SwiftUI
-
-struct ImagePickerView: UIViewControllerRepresentable {
-    // UIImagePickerController(写真撮影)が表示されているかを管理
-    @Binding var isShowSheet: Bool
-    // 撮影した写真を格納する変数
-    @Binding var captureImage: UIImage?
+class CameraViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate {
     
-    // Coordinatorでコントローラのdelegateを管理
-    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
-        // ImagePickerView型の定数を用意
-        let parent: ImagePickerView
+    var captureSession: AVCaptureSession!
+    var previewLayer: AVCaptureVideoPreviewLayer!
+    var detectionOverlay: CALayer! = nil
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupCamera()
+    }
+    
+    func setupCamera() {
+        captureSession = AVCaptureSession()
+        captureSession.sessionPreset = .photo
         
-        // イニシャライザ
-        init(_ parent: ImagePickerView) {
-            self.parent = parent
+        guard let backCamera = AVCaptureDevice.default(for: AVMediaType.video) else {
+            print("Unable to access back camera!")
+            return
         }
         
-        // 撮影が終わったときに呼ばれるdelegateメソッド、必ず必要
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        do {
+            let input = try AVCaptureDeviceInput(device: backCamera)
+            captureSession.addInput(input)
             
-            // 撮影した写真をcaptureImageに保存
-            if let originalImage = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
-                parent.captureImage = originalImage
-            }
-            // sheetを閉じる
-            self.parent.isShowSheet.toggle()
+            let output = AVCaptureVideoDataOutput()
+            output.setSampleBufferDelegate(self, queue: DispatchQueue(label: "videoQueue"))
+            captureSession.addOutput(output)
+            
+            previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
+            previewLayer.videoGravity = .resizeAspectFill
+            previewLayer.frame = view.frame
+            view.layer.addSublayer(previewLayer)
+            
+            captureSession.startRunning()
+        } catch let error  {
+            print("Error Unable to initialize back camera:  \(error.localizedDescription)")
         }
         
-        // キャンセルボタンが選択されたときに呼ばれるdelegateメソッド、必ず必要
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            // sheetを閉じる
-            parent.isShowSheet.toggle()
+        detectionOverlay = CALayer()
+        detectionOverlay.bounds = CGRect(x: 0.0,
+                                         y: 0.0,
+                                         width: view.bounds.width,
+                                         height: view.bounds.height)
+        detectionOverlay.position = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        view.layer.addSublayer(detectionOverlay)
+    }
+    
+    func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
+            return
         }
-    } // Coordinatorここまで
+        
+        let requestOptions: [VNImageOption: Any] = [:]
+        
+        let imageRequestHandler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .right, options: requestOptions)
+        
+        do {
+            try imageRequestHandler.perform([self.detectionRequest])
+        } catch {
+            print(error)
+        }
+    }
     
-    // Coordinatorを生成、SwiftUIによって自動的に呼び出し
-    func makeCoordinator() -> Coordinator {
-        // Coordinatorクラスのインスタンスを生成
-        Coordinator(self)
-    } // makeCoordinatorここまで
+    lazy var detectionRequest: VNCoreMLRequest = {
+        do {
+            guard let modelURL = Bundle.main.url(forResource: "best", withExtension: "mlmodelc") else {
+                fatalError("Model file not found.")
+            }
+            let model = try VNCoreMLModel(for: MLModel(contentsOf: modelURL))
+            return VNCoreMLRequest(model: model, completionHandler: self.handleDetection)
+        } catch {
+            fatalError("Failed to load Vision ML model: \(error)")
+        }
+    }()
     
-    // Viewを生成するときに実行
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        // UIImagePickerControllerのインスタンスを生成
-        let myImagePickerController = UIImagePickerController()
-        // sourceTypeにcameraを設定
-        myImagePickerController.sourceType = .camera
-        // delegate設定
-        myImagePickerController.delegate = context.coordinator
-        // UIImagePickerControllerを返す
-        return myImagePickerController
-    } // makeUIViewControllerここまで
+    func handleDetection(request: VNRequest, error: Error?) {
+        guard let observations = request.results as? [VNRecognizedObjectObservation] else {
+            return
+        }
+
+        DispatchQueue.main.async {
+            self.detectionOverlay.sublayers?.removeSubrange(0...)
+
+            for observation in observations {
+                let boundingBox = observation.boundingBox
+                let transformedBoundingBox = self.transformBoundingBox(boundingBox)
+                let boundingBoxPath = CGPath(rect: transformedBoundingBox, transform: nil)
+
+                let shapeLayer = CAShapeLayer()
+                shapeLayer.path = boundingBoxPath
+                shapeLayer.strokeColor = UIColor.red.cgColor
+                shapeLayer.fillColor = UIColor.clear.cgColor
+                shapeLayer.lineWidth = 2
+
+                self.detectionOverlay.addSublayer(shapeLayer)
+
+                if let topLabelObservation = observation.labels.first {
+                    let textLayer = CATextLayer()
+                    textLayer.string = "\(topLabelObservation.identifier) \(String(format: "%.2f", topLabelObservation.confidence * 100))%"
+                    textLayer.foregroundColor = UIColor.white.cgColor
+                    textLayer.backgroundColor = UIColor.black.withAlphaComponent(0.5).cgColor
+                    textLayer.fontSize = 14
+                    let labelWidth: CGFloat = 300
+                    let labelHeight: CGFloat = 20
+                    textLayer.frame = CGRect(x: transformedBoundingBox.origin.x, y: transformedBoundingBox.origin.y - labelHeight, width: labelWidth, height: labelHeight)
+                    textLayer.alignmentMode = .center
+                    textLayer.contentsScale = UIScreen.main.scale
+
+                    self.detectionOverlay.addSublayer(textLayer)
+                }
+                
+                // OCRを実行する
+                self.performOCR(on: transformedBoundingBox)
+            }
+        }
+    }
+
+    func transformBoundingBox(_ boundingBox: CGRect) -> CGRect {
+        let x = boundingBox.origin.x * view.bounds.width
+        let y = (1 - boundingBox.origin.y - boundingBox.height) * view.bounds.height
+
+        let widthFactor: CGFloat = 1.5
+        let heightFactor: CGFloat = 1.0
+
+        let width = boundingBox.width * view.bounds.width * widthFactor
+        let height = boundingBox.height * view.bounds.height * heightFactor
+
+        let adjustedX = x - (width - boundingBox.width * view.bounds.width) / 2
+        let adjustedY = y - (height - boundingBox.height * view.bounds.height) / 2
+
+        return CGRect(x: adjustedX, y: adjustedY, width: width, height: height)
+    }
     
-    // Viewが更新されたときに実行
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {
-        // 処理なし
-    } // updateUIViewControllerここまで
-} // ImagePickerViewここまで
+    func performOCR(on boundingBox: CGRect) {
+        let image = captureImageFromPreviewLayer()
+        guard let cgImage = image?.cgImage?.cropping(to: boundingBox) else {
+            return
+        }
+        
+        recognize(cgImage: cgImage) { texts in
+            DispatchQueue.main.async {
+                for (index, text) in texts.enumerated() {
+                    let textLayer = CATextLayer()
+                    textLayer.string = text
+                    textLayer.foregroundColor = UIColor.white.cgColor
+                    textLayer.backgroundColor = UIColor.black.withAlphaComponent(0.5).cgColor
+                    textLayer.fontSize = 14
+                    let labelWidth: CGFloat = 300
+                    let labelHeight: CGFloat = 20
+                    textLayer.frame = CGRect(x: boundingBox.origin.x, y: boundingBox.origin.y + CGFloat(index * Int(labelHeight)), width: labelWidth, height: labelHeight)
+                    textLayer.alignmentMode = .center
+                    textLayer.contentsScale = UIScreen.main.scale
+
+                    self.detectionOverlay.addSublayer(textLayer)
+                }
+            }
+        }
+    }
+    
+    func captureImageFromPreviewLayer() -> UIImage? {
+        UIGraphicsBeginImageContextWithOptions(view.bounds.size, false, 0.0)
+        view.drawHierarchy(in: view.bounds, afterScreenUpdates: true)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image
+    }
+    
+    func recognize(cgImage: CGImage, handler: @escaping ([String]) -> Void) {
+        var texts: [String] = []
+        let request = VNRecognizeTextRequest { (request, error) in
+            guard let observations = request.results as? [VNRecognizedTextObservation] else { return }
+            for observation in observations {
+                let candidates = observation.topCandidates(5)
+                for candidate in candidates {
+                    print(candidate.string)
+                }
+                texts.append(candidates.first!.string)
+            }
+            handler(texts)
+        }
+
+        request.recognitionLanguages = ["ja-JP"]
+        let handler = VNImageRequestHandler(cgImage: cgImage)
+        try? handler.perform([request])
+    }
+}
 

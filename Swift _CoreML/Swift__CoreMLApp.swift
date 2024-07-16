@@ -1,12 +1,19 @@
-import UIKit
+import SwiftUI
+import CoreML
+import AVFoundation
 
-//@main
-//struct MainApp {
-//    static func main() {
-//        let viewController = ObjectDetectionViewController()
-//        let window = UIWindow(frame: UIScreen.main.bounds)
-//        window.rootViewController = viewController
-//        window.makeKeyAndVisible()
-//    }
-//}
+
+
+// アプリケーションのエントリーポイントを定義
+@main
+struct ObjectDetectionApp: App {
+    // アプリのUIの主要な構成要素を定義
+    var body: some Scene {
+        // ウィンドウグループを作成し、ContentViewを表示
+        WindowGroup {
+            ContentView()
+        }
+        
+    }
+}
 
